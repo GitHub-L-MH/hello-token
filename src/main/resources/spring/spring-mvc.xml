@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+    <!--启用Spring基于annotation的DI，使用户可以在Spring Mvc中使用Spring强大的功能-->
+    <!--激活@Required @Autowired-->
+    <context:annotation-config/>
+
+    <!--仅扫描controller包下Spring Mvc管理的注解Bean 忽略了@Service...-->
+    <context:component-scan base-package="com.smbms.controller">
+        <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--配置alibaba的  FastJson转换器-->
+    <bean id="fastJsonHttpMessageConverter" class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter">
+        <property name="supportedMediaTypes">
+            <list>
+                <value>text/html;charset=UTF-8</value>
+                <value>application/json;charset=UTF-8</value>
+            </list>
+        </property>
+        <property name="features">
+            <list>
+                <value>QuoteFieldNames</value>
+                <value>WriteMapNullValue</value>
+                <value>WriteNullNumberAsZero</value>
+                <value>WriteNullListAsEmpty</value>
+                <value>WriteNullStringAsEmpty</value>
+                <value>WriteNullBooleanAsFalse</value>
+                <value>WriteDateUseDateFormat</value>
+                <value>PrettyFormat</value>
+            </list>
+        </property>
+        <property name="dateFormat" value="yyyy-MM-dd"/>
+    </bean>
+
+    <!--
+        加载静态文件 spring3.0之前url对于.html  不受理  所以只能写成.do  .action去通过
+        DispatcherServlet去处理请求响应的页面，此配置可以解决静态文件的请求
+    -->
+    <mvc:default-servlet-handler/>
+
+    <!--配置Spring Mvc 的注解驱动-->
+    <mvc:annotation-driven>
+        <!--配置不使用默认的消息转换器-->
+        <mvc:message-converters register-defaults="false">
+            <!--配置字符串的转换器-->
+            <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                <property name="defaultCharset" value="UTF-8"/>
+            </bean>
+            <!--引用fastJson处理-->
+            <ref bean="fastJsonHttpMessageConverter"/>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+
+
+
+    <!--完成视图的对应-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/jsps/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <!--配置jsonp的跨域请求-->
+    <bean class="com.alibaba.fastjson.support.spring.FastJsonpResponseBodyAdvice">
+        <constructor-arg>
+            <list>
+                <value>callback</value>
+                <value>jsonp</value>
+            </list>
+        </constructor-arg>
+    </bean>
+
+    <!--静态资源处理吗，css，js，img-->
+    <mvc:resources mapping="/resources/**" location="/resources/"/>
+
+    <!--配置全局异常处理-->
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        <property name="exceptionMappings">
+            <props>
+                <prop key="java.lang.RuntimeException">error</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!--文件上传-->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="209715200"/>
+        <property name="defaultEncoding" value="UTF-8"/>
+        <property name="resolveLazily" value="true"/>
+    </bean>
+
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/user/admin/**"/>
+            <bean class="com.smbms.interceptor.UserInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+</beans>
